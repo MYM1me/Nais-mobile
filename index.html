@@ -228,6 +228,18 @@
     padding:7px 14px; border-radius:18px; font-size:12px; font-weight:600; display:none;
     box-shadow:0 6px 18px rgba(0,0,0,.4);}
   .ac-loading.show{display:block;}
+
+  /* ---- img2img base image ---- */
+  .i2i-drop{border:1.5px dashed var(--border2); border-radius:var(--r2); padding:18px 14px;
+    display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--txt3);
+    text-align:center; font-size:13px; background:var(--bg2);}
+  .i2i-drop:active{border-color:var(--accent);}
+  .i2i-prev{position:relative; border-radius:var(--r2); overflow:hidden; background:var(--bg2);}
+  .i2i-prev img{width:100%; display:block; max-height:260px; object-fit:contain;}
+  .i2i-prev .rm{position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%;
+    background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff;}
+  .i2i-prev .dim{position:absolute; left:8px; bottom:8px; background:rgba(0,0,0,.6); color:#fff;
+    font-size:11px; padding:2px 8px; border-radius:10px; font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -274,6 +286,43 @@
       <div class="field sub" data-subwrap style="margin-bottom:0">
         <div class="slabel sub-h" data-subacc><span class="sub-arr">▾</span><label class="fl" style="margin:0">네거티브</label><span class="tk" id="tkNeg">0</span></div>
         <textarea class="pr neg sub-body" id="negative" placeholder="추가로 빼고 싶은 요소"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Base image (img2img) -->
+  <div class="card acc" id="i2iAcc">
+    <div class="acc-h" data-acc>
+      <div class="card-t" style="margin:0">베이스 이미지 <span id="i2iBadge" style="color:var(--accent2)"></span></div>
+      <div class="arr">▶</div>
+    </div>
+    <div class="acc-body">
+      <div id="i2iEmpty">
+        <label class="i2i-drop" for="i2iFile">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          <div>이미지를 올려 변형 생성 (img2img)<br><span style="color:var(--txt3);font-size:12px">탭해서 사진 선택</span></div>
+        </label>
+        <input id="i2iFile" type="file" accept="image/*" style="display:none">
+      </div>
+      <div id="i2iLoaded" style="display:none">
+        <div class="i2i-prev">
+          <img id="i2iPrev" alt="base">
+          <div class="rm" id="i2iRemove">×</div>
+          <div class="dim" id="i2iDim"></div>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <div class="slabel"><label class="fl" style="margin:0">Strength (변형 강도)</label><span class="v" id="i2iStrengthV">0.70</span></div>
+          <input type="range" id="i2iStrength" min="0.01" max="0.99" step="0.01" value="0.7">
+        </div>
+        <div class="field">
+          <div class="slabel"><label class="fl" style="margin:0">Noise</label><span class="v" id="i2iNoiseV">0.00</span></div>
+          <input type="range" id="i2iNoise" min="0" max="0.5" step="0.01" value="0">
+        </div>
+        <div class="tog">
+          <span class="lab">해상도를 원본에 맞추기</span>
+          <div class="sw on" id="swMatchRes" data-sw></div>
+        </div>
+        <p class="hint">Strength가 낮을수록 원본과 비슷하고, 높을수록 프롬프트대로 많이 바뀝니다. (0.7 정도가 기본)</p>
       </div>
     </div>
   </div>
@@ -831,6 +880,12 @@ const state={
   fragFolders:JSON.parse(LS.getItem('nais_fragfolders')||'[]'),
   batchCount:+(LS.getItem('nais_batchcount')||1),
   batchDelay:+(LS.getItem('nais_batchdelay')||1000),
+  // img2img — 이미지 데이터는 용량 때문에 메모리에만 보관
+  i2iImage:null,      // 순수 base64 (프리픽스 없음)
+  i2iW:0, i2iH:0,
+  i2iStrength:+(LS.getItem('nais_i2istrength')||0.7),
+  i2iNoise:+(LS.getItem('nais_i2inoise')||0),
+  i2iMatchRes:LS.getItem('nais_i2imatchres')!=='0',
 };
 function save(k,v){LS.setItem('nais_'+k,v);}
 
@@ -893,6 +948,9 @@ function initSelects(){
   $('tokenInput').value=state.token; $('proxyInput').value=state.proxy;
   $('batchCount').value=state.batchCount; $('batchV').textContent=state.batchCount; refreshSlider($('batchCount'));
   $('batchDelayInput').value=state.batchDelay;
+  $('i2iStrength').value=state.i2iStrength; $('i2iStrengthV').textContent=(+state.i2iStrength).toFixed(2); refreshSlider($('i2iStrength'));
+  $('i2iNoise').value=state.i2iNoise; $('i2iNoiseV').textContent=(+state.i2iNoise).toFixed(2); refreshSlider($('i2iNoise'));
+  $('swMatchRes').classList.toggle('on',state.i2iMatchRes);
   renderChars(); renderFrags();
 }
 function syncResChips(){
@@ -1045,6 +1103,67 @@ async function renderLib(){
   g.querySelectorAll('[data-libimg]').forEach(im=>im.onclick=e=>{showResult(items.find(x=>x.id===e.target.dataset.libimg).b64,true);switchPage('pageGen');});
 }
 
+//=================== img2img ===================
+// 파일을 받아 base64로 저장하고 미리보기 표시. 너무 크면 긴 변을 1536으로 줄임.
+function i2iLoadFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.naturalWidth,h=img.naturalHeight;
+      const MAXD=1536;
+      let scale=1;
+      if(Math.max(w,h)>MAXD)scale=MAXD/Math.max(w,h);
+      // NovelAI는 64의 배수 해상도를 선호
+      let tw=Math.round(w*scale/64)*64, th=Math.round(h*scale/64)*64;
+      tw=Math.max(64,tw); th=Math.max(64,th);
+      const cv=document.createElement('canvas');
+      cv.width=tw; cv.height=th;
+      cv.getContext('2d').drawImage(img,0,0,tw,th);
+      const dataUrl=cv.toDataURL('image/png');
+      state.i2iImage=dataUrl.split(',')[1];
+      state.i2iW=tw; state.i2iH=th;
+      $('i2iPrev').src=dataUrl;
+      $('i2iDim').textContent=tw+'×'+th;
+      $('i2iEmpty').style.display='none';
+      $('i2iLoaded').style.display='block';
+      $('i2iBadge').textContent='ON';
+      $('i2iAcc').classList.add('open');
+      // 해상도 맞추기가 켜져 있으면 커스텀 해상도로 반영
+      if(state.i2iMatchRes){state.res={label:'커스텀',w:tw,h:th};save('res',JSON.stringify(state.res));syncResChips();}
+      toast('베이스 이미지 설정됨 ('+tw+'×'+th+')');
+    };
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+// 라이브러리 이미지를 베이스로 (base64 PNG 직접 받음)
+function i2iFromBase64(b64){
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.naturalWidth,h=img.naturalHeight;
+    const MAXD=1536; let scale=1;
+    if(Math.max(w,h)>MAXD)scale=MAXD/Math.max(w,h);
+    let tw=Math.max(64,Math.round(w*scale/64)*64), th=Math.max(64,Math.round(h*scale/64)*64);
+    const cv=document.createElement('canvas');cv.width=tw;cv.height=th;
+    cv.getContext('2d').drawImage(img,0,0,tw,th);
+    const dataUrl=cv.toDataURL('image/png');
+    state.i2iImage=dataUrl.split(',')[1];state.i2iW=tw;state.i2iH=th;
+    $('i2iPrev').src=dataUrl;$('i2iDim').textContent=tw+'×'+th;
+    $('i2iEmpty').style.display='none';$('i2iLoaded').style.display='block';
+    $('i2iBadge').textContent='ON';$('i2iAcc').classList.add('open');
+    if(state.i2iMatchRes){state.res={label:'커스텀',w:tw,h:th};save('res',JSON.stringify(state.res));syncResChips();}
+    toast('라이브러리 이미지를 베이스로 설정');
+  };
+  img.src='data:image/png;base64,'+b64;
+}
+function i2iClear(){
+  state.i2iImage=null;state.i2iW=0;state.i2iH=0;
+  $('i2iEmpty').style.display='block';$('i2iLoaded').style.display='none';
+  $('i2iBadge').textContent='';$('i2iFile').value='';
+}
+
 //=================== Generation ===================
 function buildNegative(){
   const pre=ucPrefix(state.model,state.ucPreset);
@@ -1125,8 +1244,10 @@ async function generateOnce(idx,total){
   if(!state.seedLocked){$('seed').value=seed;}
 
   const model=state.model;
-  const w=state.res.label==='커스텀'?+$('resW').value:state.res.w;
-  const h=state.res.label==='커스텀'?+$('resH').value:state.res.h;
+  const useI2I=!!state.i2iImage;
+  let w=state.res.label==='커스텀'?+$('resW').value:state.res.w;
+  let h=state.res.label==='커스텀'?+$('resH').value:state.res.h;
+  if(useI2I&&state.i2iMatchRes){w=state.i2iW;h=state.i2iH;}
 
   // char captions (wildcards expanded once each)
   const charCaps=[],charNegCaps=[];
@@ -1156,7 +1277,12 @@ async function generateOnce(idx,total){
     v4_prompt:{caption:{base_caption:finalPrompt,char_captions:charCaps},use_coords:state.coords&&charCaps.length>0,use_order:true},
     v4_negative_prompt:{caption:{base_caption:finalNeg,char_captions:charNegCaps},legacy_uc:false},
   };
-  const payload={input:finalPrompt,model:model,action:'generate',parameters:params};
+  if(useI2I){
+    params.image=state.i2iImage;
+    params.strength=+state.i2iStrength;
+    params.noise=+state.i2iNoise;
+  }
+  const payload={input:finalPrompt,model:model,action:useI2I?'img2img':'generate',parameters:params};
 
   try{
     const url=naiURL('https://image.novelai.net/ai/generate-image');
@@ -1197,8 +1323,10 @@ function showResult(b64,fromLib,meta){
   box.innerHTML=`<img src="data:image/png;base64,${b64}">
     <div class="result-act">
       <a class="ra" download="nais_${Date.now()}.png" href="data:image/png;base64,${b64}">⬇ 저장</a>
+      <button class="ra" id="useAsBase">🖼 베이스로</button>
       ${meta?`<button class="ra" id="reuseSeed">🔁 시드 재사용</button>`:''}
     </div>`;
+  $('useAsBase').onclick=()=>{i2iFromBase64(b64);$('i2iAcc').scrollIntoView({behavior:'smooth',block:'center'});};
   if(meta){$('reuseSeed').onclick=()=>{state.seed=''+meta.seed;state.seedLocked=true;$('seed').value=meta.seed;$('seedLock').classList.add('on');$('seedLock').textContent='🔒';save('seed',meta.seed);save('seedlock','1');toast('시드 고정됨');};}
   box.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -1291,6 +1419,13 @@ function bind(){
 
   $('batchCount').oninput=e=>{state.batchCount=+e.target.value;$('batchV').textContent=e.target.value;save('batchcount',e.target.value);refreshSlider(e.target);};
   $('batchDelayInput').oninput=e=>{state.batchDelay=Math.max(0,+e.target.value||0);save('batchdelay',''+state.batchDelay);};
+
+  // img2img
+  $('i2iFile').onchange=e=>{if(e.target.files&&e.target.files[0])i2iLoadFile(e.target.files[0]);};
+  $('i2iRemove').onclick=i2iClear;
+  $('i2iStrength').oninput=e=>{state.i2iStrength=+e.target.value;$('i2iStrengthV').textContent=(+e.target.value).toFixed(2);save('i2istrength',e.target.value);refreshSlider(e.target);};
+  $('i2iNoise').oninput=e=>{state.i2iNoise=+e.target.value;$('i2iNoiseV').textContent=(+e.target.value).toFixed(2);save('i2inoise',e.target.value);refreshSlider(e.target);};
+  $('swMatchRes').onclick=()=>{state.i2iMatchRes=!state.i2iMatchRes;$('swMatchRes').classList.toggle('on',state.i2iMatchRes);save('i2imatchres',state.i2iMatchRes?'1':'0');if(state.i2iMatchRes&&state.i2iImage){state.res={label:'커스텀',w:state.i2iW,h:state.i2iH};save('res',JSON.stringify(state.res));syncResChips();}};
 
   // toggles
   $('swQuality').onclick=()=>{state.quality=!state.quality;$('swQuality').classList.toggle('on',state.quality);save('quality',state.quality?'1':'0');};
