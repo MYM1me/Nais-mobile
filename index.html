@@ -246,7 +246,7 @@
 
 <div class="topbar">
   <div class="logo">NAIS<span> mobile</span></div>
-  <div class="anlas" id="anlasBox"><span class="dot"></span><b id="anlasVal">—</b> Anlas</div>
+  <div class="anlas" id="anlasBox"><span class="dot"></span><b id="anlasVal">—</b> Anlas <span id="tierBadge" style="color:var(--txt3);font-weight:600"></span></div>
   <button class="icon-btn" id="btnSettings" aria-label="설정">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
@@ -854,6 +854,8 @@ const LS=window.localStorage;
 const state={
   token:LS.getItem('nais_token')||'',
   proxy:LS.getItem('nais_proxy')||'',
+  tier:-1,            // -1=미확인, 0~3=NAI 구독 등급 (3=Opus)
+  tierName:'',
   autosave:LS.getItem('nais_autosave')!=='0',
   model:LS.getItem('nais_model')||'nai-diffusion-4-5-full',
   steps:+(LS.getItem('nais_steps')||28),
@@ -957,6 +959,7 @@ function syncResChips(){
   document.querySelectorAll('[data-res]').forEach(c=>c.classList.toggle('on',c.dataset.res===state.res.label));
   $('customRes').style.display=state.res.label==='커스텀'?'flex':'none';
   if(state.res.label==='커스텀'){$('resW').value=state.res.w||832;$('resH').value=state.res.h||1216;}
+  if(typeof updateGenCost==='function')updateGenCost();
 }
 function refreshSlider(el){const min=+el.min,max=+el.max;const p=((el.value-min)/(max-min))*100;el.style.setProperty('--p',p+'%');}
 
@@ -1132,6 +1135,7 @@ function i2iLoadFile(file){
       $('i2iAcc').classList.add('open');
       // 해상도 맞추기가 켜져 있으면 커스텀 해상도로 반영
       if(state.i2iMatchRes){state.res={label:'커스텀',w:tw,h:th};save('res',JSON.stringify(state.res));syncResChips();}
+      updateGenCost();
       toast('베이스 이미지 설정됨 ('+tw+'×'+th+')');
     };
     img.src=reader.result;
@@ -1154,6 +1158,7 @@ function i2iFromBase64(b64){
     $('i2iEmpty').style.display='none';$('i2iLoaded').style.display='block';
     $('i2iBadge').textContent='ON';$('i2iAcc').classList.add('open');
     if(state.i2iMatchRes){state.res={label:'커스텀',w:tw,h:th};save('res',JSON.stringify(state.res));syncResChips();}
+    updateGenCost();
     toast('라이브러리 이미지를 베이스로 설정');
   };
   img.src='data:image/png;base64,'+b64;
@@ -1162,6 +1167,7 @@ function i2iClear(){
   state.i2iImage=null;state.i2iW=0;state.i2iH=0;
   $('i2iEmpty').style.display='block';$('i2iLoaded').style.display='none';
   $('i2iBadge').textContent='';$('i2iFile').value='';
+  updateGenCost();
 }
 
 //=================== Generation ===================
@@ -1323,12 +1329,49 @@ function showResult(b64,fromLib,meta){
   box.innerHTML=`<img src="data:image/png;base64,${b64}">
     <div class="result-act">
       <a class="ra" download="nais_${Date.now()}.png" href="data:image/png;base64,${b64}">⬇ 저장</a>
+      <button class="ra" id="enhanceBtn">✨ Enhance</button>
       <button class="ra" id="useAsBase">🖼 베이스로</button>
       ${meta?`<button class="ra" id="reuseSeed">🔁 시드 재사용</button>`:''}
     </div>`;
   $('useAsBase').onclick=()=>{i2iFromBase64(b64);$('i2iAcc').scrollIntoView({behavior:'smooth',block:'center'});};
+  $('enhanceBtn').onclick=()=>enhanceFromBase64(b64,meta);
   if(meta){$('reuseSeed').onclick=()=>{state.seed=''+meta.seed;state.seedLocked=true;$('seed').value=meta.seed;$('seedLock').classList.add('on');$('seedLock').textContent='🔒';save('seed',meta.seed);save('seedlock','1');toast('시드 고정됨');};}
   box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Enhance: 이미지를 베이스로 넣고 해상도 1.5배 확대 + strength 낮춰 디테일 업
+function enhanceFromBase64(b64,meta){
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.naturalWidth,h=img.naturalHeight;
+    // 1.5배 확대
+    let tw=Math.round(w*1.5/64)*64, th=Math.round(h*1.5/64)*64;
+    // 상한 (NAI 권장 범위 보호: 한 변 2048 정도)
+    const MAXD=2048;
+    if(Math.max(tw,th)>MAXD){const s=MAXD/Math.max(tw,th);tw=Math.round(tw*s/64)*64;th=Math.round(th*s/64)*64;}
+    tw=Math.max(64,tw); th=Math.max(64,th);
+    const cv=document.createElement('canvas');cv.width=tw;cv.height=th;
+    cv.getContext('2d').drawImage(img,0,0,tw,th);
+    const dataUrl=cv.toDataURL('image/png');
+    // 베이스 이미지로 설정
+    state.i2iImage=dataUrl.split(',')[1];state.i2iW=tw;state.i2iH=th;
+    $('i2iPrev').src=dataUrl;$('i2iDim').textContent=tw+'×'+th;
+    $('i2iEmpty').style.display='none';$('i2iLoaded').style.display='block';
+    $('i2iBadge').textContent='ON';$('i2iAcc').classList.add('open');
+    // strength/noise 자동 세팅 (Enhance 권장값)
+    state.i2iStrength=0.3; save('i2istrength',0.3);
+    state.i2iNoise=0; save('i2inoise',0);
+    if($('i2iStrength')){$('i2iStrength').value=0.3;$('i2iStrengthV').textContent='0.30';refreshSlider($('i2iStrength'));}
+    if($('i2iNoise')){$('i2iNoise').value=0;$('i2iNoiseV').textContent='0.00';refreshSlider($('i2iNoise'));}
+    // 해상도를 확대본에 맞춤
+    state.res={label:'커스텀',w:tw,h:th};save('res',JSON.stringify(state.res));syncResChips();
+    // 시드 유지 (있으면) — 같은 그림 디테일업에 유리
+    if(meta&&typeof meta.seed!=='undefined'){state.seed=''+meta.seed;state.seedLocked=true;$('seed').value=meta.seed;$('seedLock').classList.add('on');$('seedLock').textContent='🔒';save('seed',meta.seed);save('seedlock','1');}
+    updateGenCost();
+    $('i2iAcc').scrollIntoView({behavior:'smooth',block:'center'});
+    toast('Enhance 준비 완료 — '+tw+'×'+th+', strength 0.3. 생성을 누르세요');
+  };
+  img.src='data:image/png;base64,'+b64;
 }
 
 function showCorsHelp(){
@@ -1350,7 +1393,44 @@ async function loadAnlas(){
     const purchased=(d.trainingStepsLeft&&d.trainingStepsLeft.purchasedTrainingSteps)||0;
     $('anlasVal').textContent=(fixed+purchased).toLocaleString();
     $('anlasBox').classList.add('on');
+    // 구독 등급 자동 감지
+    state.tier=(typeof d.tier==='number')?d.tier:-1;
+    state.tierName=TIER_NAMES[state.tier]||'';
+    const tb=$('tierBadge');
+    if(tb){ tb.textContent=state.tierName?('· '+state.tierName):''; }
+    updateGenCost();
   }catch(e){/* silent */}
+}
+
+const TIER_NAMES={0:'Paper',1:'Tablet',2:'Scroll',3:'Opus'};
+
+// 현재 설정 기준 예상 Anlas 소모량 계산
+// Opus 무료조건: 단일 생성(배치1) + 베이스 없음 + 1024x1024 이하(픽셀≤1048576) + 28스텝 이하
+function estimateAnlas(){
+  const w=state.res.w, h=state.res.h, steps=state.steps;
+  const batch=state.batchCount||1;
+  const hasBase=!!state.i2iImage;
+  const px=w*h;
+  const opus=(state.tier===3);
+  // Opus 무료 판정
+  if(opus && batch===1 && !hasBase && px<=1048576 && steps<=28){
+    return {free:true, cost:0};
+  }
+  // 유료 추정식 (NAI 공식 근사). 정확값은 서버가 정하므로 "예상"으로 표시.
+  // 1024x1024 / 28step 단일 생성 ≈ 약 26 Anlas 기준으로 픽셀·스텝 비례.
+  let oneCost = Math.round( (px/1048576) * (steps/28) * 26 );
+  if(oneCost<1) oneCost=1;
+  return {free:false, cost: oneCost*batch};
+}
+
+function updateGenCost(){
+  const lbl=$('genLabel'); if(!lbl)return;
+  const e=estimateAnlas();
+  let costTxt;
+  if(state.tier===-1){ costTxt=''; }            // 토큰 미확인
+  else if(e.free){ costTxt=' · 무료'; }
+  else { costTxt=' · 예상 '+e.cost.toLocaleString()+' Anlas'; }
+  lbl.textContent='이미지 생성'+costTxt;
 }
 
 //=================== Settings / verify ===================
@@ -1409,7 +1489,7 @@ function bind(){
   $('scheduler').onchange=e=>{state.scheduler=e.target.value;save('scheduler',e.target.value);};
   $('ucPreset').onchange=e=>{state.ucPreset=+e.target.value;save('uc',e.target.value);};
 
-  $('steps').oninput=e=>{state.steps=+e.target.value;$('stepsV').textContent=e.target.value;save('steps',e.target.value);refreshSlider(e.target);};
+  $('steps').oninput=e=>{state.steps=+e.target.value;$('stepsV').textContent=e.target.value;save('steps',e.target.value);refreshSlider(e.target);updateGenCost();};
   $('cfg').oninput=e=>{state.cfg=+e.target.value;$('cfgV').textContent=(+e.target.value).toFixed(1);save('cfg',e.target.value);refreshSlider(e.target);};
   $('rescale').oninput=e=>{state.rescale=+e.target.value;$('rescaleV').textContent=(+e.target.value).toFixed(2);save('rescale',e.target.value);refreshSlider(e.target);};
 
@@ -1417,7 +1497,7 @@ function bind(){
   $('seedRandom').onclick=()=>{const s=Math.floor(Math.random()*4294967295);state.seed=''+s;$('seed').value=s;save('seed',''+s);};
   $('seedLock').onclick=()=>{state.seedLocked=!state.seedLocked;$('seedLock').classList.toggle('on',state.seedLocked);$('seedLock').textContent=state.seedLocked?'🔒':'🔓';save('seedlock',state.seedLocked?'1':'0');};
 
-  $('batchCount').oninput=e=>{state.batchCount=+e.target.value;$('batchV').textContent=e.target.value;save('batchcount',e.target.value);refreshSlider(e.target);};
+  $('batchCount').oninput=e=>{state.batchCount=+e.target.value;$('batchV').textContent=e.target.value;save('batchcount',e.target.value);refreshSlider(e.target);updateGenCost();};
   $('batchDelayInput').oninput=e=>{state.batchDelay=Math.max(0,+e.target.value||0);save('batchdelay',''+state.batchDelay);};
 
   // img2img
@@ -1437,8 +1517,8 @@ function bind(){
   document.querySelectorAll('[data-res]').forEach(c=>c.onclick=()=>{
     const r=RES.find(x=>x.label===c.dataset.res);state.res={label:r.label,w:r.w,h:r.h};save('res',JSON.stringify(state.res));syncResChips();
   });
-  $('resW').oninput=e=>{state.res.w=+e.target.value;save('res',JSON.stringify(state.res));};
-  $('resH').oninput=e=>{state.res.h=+e.target.value;save('res',JSON.stringify(state.res));};
+  $('resW').oninput=e=>{state.res.w=+e.target.value;save('res',JSON.stringify(state.res));updateGenCost();};
+  $('resH').oninput=e=>{state.res.h=+e.target.value;save('res',JSON.stringify(state.res));updateGenCost();};
 
   // characters
   $('addChar').onclick=()=>{state.chars.push({name:'',prompt:'',negative:'',enabled:true,x:0.5,y:0.5,folder:null,collapsed:false});saveChars();renderChars();$('charAcc').classList.add('open');};
