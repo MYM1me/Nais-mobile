@@ -350,6 +350,11 @@
         <button class="sbtn lock" id="seedLock" aria-label="시드 잠금">🔓</button>
       </div>
     </div>
+    <div class="field" style="margin-top:12px">
+      <div class="slabel"><label class="fl" style="margin:0">생성 장수 (배치)</label><span class="v" id="batchV">1</span></div>
+      <input type="range" id="batchCount" min="1" max="50" value="1">
+      <p class="hint" style="margin-top:4px">2장 이상이면 한 장씩 이어서 자동 생성합니다. 매 장 랜덤 시드 · 와일드카드 재추첨.</p>
+    </div>
     </div>
   </div>
 
@@ -457,6 +462,10 @@
       <span class="lab">생성 후 라이브러리 자동 저장</span>
       <div class="sw on" id="swAutosave" data-sw></div>
     </div>
+
+    <label class="fl" style="margin-top:14px">배치 생성 간격 (ms)</label>
+    <input class="tin" id="batchDelayInput" type="number" min="0" step="100" placeholder="1000">
+    <p class="hint" style="margin-top:-4px">배치(여러 장)에서 한 장이 끝난 뒤 다음 장까지 기다리는 시간. 너무 짧으면 API 제한에 걸릴 수 있어요.</p>
 
     <div style="display:flex;gap:8px;margin-top:18px">
       <button class="btn btn-s" id="closeSettings">닫기</button>
@@ -820,6 +829,8 @@ const state={
   negative:LS.getItem('nais_negative')||'',
   frags:JSON.parse(LS.getItem('nais_frags')||'[]').map(f=>f.id?f:{id:'g'+Math.random().toString(36).slice(2,8),folder:null,name:f.name||'조각',content:f.content||''}),
   fragFolders:JSON.parse(LS.getItem('nais_fragfolders')||'[]'),
+  batchCount:+(LS.getItem('nais_batchcount')||1),
+  batchDelay:+(LS.getItem('nais_batchdelay')||1000),
 };
 function save(k,v){LS.setItem('nais_'+k,v);}
 
@@ -880,6 +891,8 @@ function initSelects(){
   updateTokens();
   // settings
   $('tokenInput').value=state.token; $('proxyInput').value=state.proxy;
+  $('batchCount').value=state.batchCount; $('batchV').textContent=state.batchCount; refreshSlider($('batchCount'));
+  $('batchDelayInput').value=state.batchDelay;
   renderChars(); renderFrags();
 }
 function syncResChips(){
@@ -1065,13 +1078,49 @@ function buildPrompt(){
 }
 function stripComments(s){return s.split('\n').filter(l=>!l.trimStart().startsWith('#')).join('\n');}
 
+let BATCH={running:false,abort:false};
+
 async function generate(){
+  if(BATCH.running){ // 두 번째 클릭 = 중단 요청
+    BATCH.abort=true;
+    $('genLabel').textContent='중단 중…';
+    return;
+  }
   if(!state.token){toast('먼저 설정에서 토큰을 입력하세요',true);openSettings();return;}
+
+  const total=Math.max(1,Math.min(50,state.batchCount||1));
+  const delay=Math.max(0,state.batchDelay||0);
   const btn=$('genBtn');
-  btn.disabled=true;
-  $('genLabel').textContent='생성 중...';
+  BATCH.running=true;BATCH.abort=false;
   btn.querySelector('.spin')||btn.insertAdjacentHTML('afterbegin','<span class="spin"></span>');
 
+  let done=0,failed=0;
+  for(let i=0;i<total;i++){
+    if(BATCH.abort)break;
+    $('genLabel').textContent=total>1?`생성 중 ${i+1}/${total} · 탭하면 중단`:'생성 중…';
+    const ok=await generateOnce(i,total);
+    if(ok)done++;else{failed++;}
+    // CORS 같은 치명적 오류면 배치 중단
+    if(ok==='fatal')break;
+    if(BATCH.abort)break;
+    if(i<total-1&&delay>0){
+      // 대기 (중단 가능하게 잘게 쪼갬)
+      const steps=Math.ceil(delay/100);
+      for(let s=0;s<steps;s++){if(BATCH.abort)break;await new Promise(r=>setTimeout(r,Math.min(100,delay)));}
+    }
+  }
+
+  BATCH.running=false;BATCH.abort=false;
+  btn.disabled=false;
+  $('genLabel').textContent='이미지 생성';
+  const sp=btn.querySelector('.spin'); if(sp)sp.remove();
+  if(total>1){
+    toast(`배치 완료 · 성공 ${done}${failed?` · 실패 ${failed}`:''}`);
+  }
+}
+
+// 단일 생성 1회. 성공 true / 실패 false / 치명적(CORS 등) 'fatal'
+async function generateOnce(idx,total){
   let seed=state.seedLocked&&state.seed?+state.seed:Math.floor(Math.random()*4294967295);
   if(!state.seedLocked){$('seed').value=seed;}
 
@@ -1125,22 +1174,21 @@ async function generate(){
     const fname=Object.keys(zip.files)[0];
     const b64=await zip.file(fname).async('base64');
     showResult(b64,false,{seed,model,w,h});
-    if(state.autosave){await dbAdd({id:'i'+Date.now(),b64,ts:Date.now(),seed,prompt:joinPrompt()});}
+    if(state.autosave){await dbAdd({id:'i'+Date.now()+'_'+(idx||0),b64,ts:Date.now(),seed,prompt:joinPrompt()});}
     loadAnlas();
-    toast('생성 완료 (seed '+seed+')');
+    if(!total||total<=1)toast('생성 완료 (seed '+seed+')');
+    return true;
   }catch(e){
     const msg=(''+e.message);
     if(/Failed to fetch|NetworkError|CORS/i.test(msg)){
       toast('CORS 차단됨 — 설정에서 프록시 필요',true);
       showCorsHelp();
+      return 'fatal';
     }else{
       toast(msg.slice(0,60),true);
     }
     console.error(e);
-  }finally{
-    btn.disabled=false;
-    $('genLabel').textContent='이미지 생성';
-    const sp=btn.querySelector('.spin'); if(sp)sp.remove();
+    return false;
   }
 }
 
@@ -1240,6 +1288,9 @@ function bind(){
   $('seed').oninput=e=>{state.seed=e.target.value;save('seed',e.target.value);};
   $('seedRandom').onclick=()=>{const s=Math.floor(Math.random()*4294967295);state.seed=''+s;$('seed').value=s;save('seed',''+s);};
   $('seedLock').onclick=()=>{state.seedLocked=!state.seedLocked;$('seedLock').classList.toggle('on',state.seedLocked);$('seedLock').textContent=state.seedLocked?'🔒':'🔓';save('seedlock',state.seedLocked?'1':'0');};
+
+  $('batchCount').oninput=e=>{state.batchCount=+e.target.value;$('batchV').textContent=e.target.value;save('batchcount',e.target.value);refreshSlider(e.target);};
+  $('batchDelayInput').oninput=e=>{state.batchDelay=Math.max(0,+e.target.value||0);save('batchdelay',''+state.batchDelay);};
 
   // toggles
   $('swQuality').onclick=()=>{state.quality=!state.quality;$('swQuality').classList.toggle('on',state.quality);save('quality',state.quality?'1':'0');};
