@@ -1384,10 +1384,20 @@ function showCorsHelp(){
 //=================== Anlas ===================
 async function loadAnlas(){
   if(!state.token)return;
+  const dbg=(msg)=>{const el=$('verifyMsg'); if(el&&el.dataset.keep!=='1')el.innerHTML=msg;};
   try{
     const url=naiURL('https://api.novelai.net/user/subscription');
-    const r=await fetch(url,{headers:{'Authorization':'Bearer '+state.token.trim()}});
-    if(!r.ok)return;
+    let r;
+    try{
+      r=await fetch(url,{headers:{'Authorization':'Bearer '+state.token.trim()}});
+    }catch(netErr){
+      dbg('<span style="color:var(--bad)">Anlas 조회 실패: 네트워크/CORS ('+(''+netErr.message).slice(0,40)+')<br>구독 정보 호출이 프록시를 못 타는 중일 수 있어요</span>');
+      return;
+    }
+    if(!r.ok){
+      dbg('<span style="color:var(--warn)">Anlas 조회 응답 '+r.status+' — 토큰 또는 프록시 확인 필요</span>');
+      return;
+    }
     const d=await r.json();
     const fixed=(d.trainingStepsLeft&&d.trainingStepsLeft.fixedTrainingStepsLeft)||0;
     const purchased=(d.trainingStepsLeft&&d.trainingStepsLeft.purchasedTrainingSteps)||0;
@@ -1399,7 +1409,9 @@ async function loadAnlas(){
     const tb=$('tierBadge');
     if(tb){ tb.textContent=state.tierName?('· '+state.tierName):''; }
     updateGenCost();
-  }catch(e){/* silent */}
+  }catch(e){
+    const el=$('verifyMsg'); if(el&&el.dataset.keep!=='1')el.innerHTML='<span style="color:var(--bad)">Anlas 처리 오류: '+(''+e.message).slice(0,40)+'</span>';
+  }
 }
 
 const TIER_NAMES={0:'Paper',1:'Tablet',2:'Scroll',3:'Opus'};
@@ -1445,8 +1457,30 @@ async function verifyToken(){
     const url=naiURL('https://api.novelai.net/user/subscription');
     const r=await fetch(url,{headers:{'Authorization':'Bearer '+tk}});
     if(r.ok){
-      $('verifyMsg').innerHTML='<span style="color:var(--good)">✓ 유효한 토큰입니다</span>';
-      loadAnlas();
+      const d=await r.json();
+      // 실제 응답에서 Anlas/등급 추출 시도
+      const tsl=d.trainingStepsLeft||{};
+      const fixed=tsl.fixedTrainingStepsLeft;
+      const purchased=tsl.purchasedTrainingSteps;
+      const total=(typeof fixed==='number'?fixed:0)+(typeof purchased==='number'?purchased:0);
+      const tierNum=(typeof d.tier==='number')?d.tier:null;
+      if(typeof fixed==='number'||typeof purchased==='number'){
+        $('anlasVal').textContent=total.toLocaleString();
+        $('anlasBox').classList.add('on');
+      }
+      if(tierNum!==null){
+        state.tier=tierNum; state.tierName=TIER_NAMES[tierNum]||('tier'+tierNum);
+        const tb=$('tierBadge'); if(tb)tb.textContent=state.tierName?('· '+state.tierName):'';
+      }
+      updateGenCost();
+      // 성공 메시지 + 실제로 읽힌 값 요약 (필드가 비면 키 목록을 보여줘 디버그)
+      let info='';
+      if(typeof fixed!=='number'&&typeof purchased!=='number'){
+        info='<br><span style="color:var(--warn);font-size:12px">Anlas 필드를 못 찾음. 응답 키: '+Object.keys(d).join(', ').slice(0,120)+'</span>';
+      }else{
+        info='<br><span style="color:var(--txt3);font-size:12px">등급 '+(state.tierName||'?')+' · Anlas '+total.toLocaleString()+'</span>';
+      }
+      $('verifyMsg').innerHTML='<span style="color:var(--good)">✓ 유효한 토큰입니다</span>'+info;
     }else if(r.status===401){
       $('verifyMsg').innerHTML='<span style="color:var(--bad)">✗ 토큰이 올바르지 않습니다 (401)</span>';
     }else{
