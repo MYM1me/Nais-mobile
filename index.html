@@ -56,6 +56,10 @@
   .tk{font-size:11px; color:var(--txt3); font-weight:600; background:var(--bg2);
     padding:1px 7px; border-radius:8px; min-width:18px; text-align:center;}
   .tk.warn{color:#ffb86b;} .tk.over{color:var(--bad);}
+  .sub-h{cursor:pointer; user-select:none;}
+  .sub-arr{display:inline-block; font-size:11px; color:var(--txt3); transition:.18s; transform:rotate(0deg);}
+  .sub.collapsed .sub-arr{transform:rotate(-90deg);}
+  .sub.collapsed .sub-body{display:none;}
   .mini{min-height:46px!important;}
 
   /* ---- Controls ---- */
@@ -143,7 +147,7 @@
   /* fragments */
   .frag{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--bg2);
     border:1px solid var(--border); border-radius:var(--r2); margin-bottom:8px;}
-  .frag .fn{font-weight:600; font-size:14px; flex:0 0 auto; max-width:35%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--accent2);}
+  .frag .fn{font-weight:600; font-size:14px; flex:0 0 auto; max-width:28%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--accent2);}
   .frag .ft{flex:1; min-width:0; font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .frag .fb{flex:0 0 auto; font-size:12px; padding:6px 10px; border-radius:8px; background:var(--accent-dim); color:var(--accent2); font-weight:600;}
 
@@ -171,6 +175,22 @@
   .charblk .ch-del{margin-left:auto; color:var(--txt3); font-size:18px; width:26px; height:26px;}
   .addchar{width:100%; padding:10px; border-radius:var(--r2); background:var(--accent-dim);
     color:var(--accent2); font-weight:600; font-size:13px; border:1px dashed var(--accent);}
+  .ch-name{flex:1; min-width:0; background:transparent; border:none; color:var(--accent2);
+    font-size:13px; font-weight:700; padding:2px 0;}
+  .ch-name:focus{outline:none; border-bottom:1px solid var(--accent);}
+  .charblk .ch-top .sub-arr{cursor:pointer; font-size:12px;}
+  .charblk.collapsed .sub-arr{transform:rotate(-90deg);}
+  .charblk.collapsed .ch-body{display:none;}
+  .cfolder{border:1px solid var(--border2); border-radius:var(--r2); margin-bottom:10px; overflow:hidden;}
+  .cfolder-h{display:flex; align-items:center; gap:7px; padding:9px 10px; background:var(--bg2);}
+  .cfolder-h .sub-arr{cursor:pointer; font-size:12px; color:var(--txt3); transition:.18s;}
+  .cfolder.collapsed .sub-arr{transform:rotate(-90deg);}
+  .cfolder.collapsed .cfolder-body{display:none;}
+  .cfolder-body{padding:10px 10px 2px;}
+  .cf-name{flex:1; min-width:0; background:transparent; border:none; color:var(--txt); font-size:13px; font-weight:700;}
+  .cf-name:focus{outline:none; border-bottom:1px solid var(--accent);}
+  .cf-count{font-size:11px; color:var(--txt3); background:var(--panel); padding:1px 7px; border-radius:8px;}
+  .fic{font-size:14px;}
 
   .toast{position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:80;
     background:var(--panel2); border:1px solid var(--border2); color:var(--txt); padding:11px 18px;
@@ -217,21 +237,21 @@
       <div class="arr">▶</div>
     </div>
     <div class="acc-body">
-      <div class="field">
-        <div class="slabel"><label class="fl" style="margin:0">기본</label><span class="tk" id="tkBase">0</span></div>
-        <textarea class="pr" id="pBase" placeholder="1girl, ..."></textarea>
+      <div class="field sub" data-subwrap>
+        <div class="slabel sub-h" data-subacc><span class="sub-arr">▾</span><label class="fl" style="margin:0">기본</label><span class="tk" id="tkBase">0</span></div>
+        <textarea class="pr sub-body" id="pBase" placeholder="1girl, ..."></textarea>
       </div>
-      <div class="field">
-        <div class="slabel"><label class="fl" style="margin:0">추가</label><span class="tk" id="tkAdd">0</span></div>
-        <textarea class="pr" id="pAdd" placeholder="추가 태그"></textarea>
+      <div class="field sub" data-subwrap>
+        <div class="slabel sub-h" data-subacc><span class="sub-arr">▾</span><label class="fl" style="margin:0">추가</label><span class="tk" id="tkAdd">0</span></div>
+        <textarea class="pr sub-body" id="pAdd" placeholder="추가 태그"></textarea>
       </div>
-      <div class="field">
-        <div class="slabel"><label class="fl" style="margin:0">세부</label><span class="tk" id="tkDetail">0</span></div>
-        <textarea class="pr" id="pDetail" placeholder="세부 태그"></textarea>
+      <div class="field sub" data-subwrap>
+        <div class="slabel sub-h" data-subacc><span class="sub-arr">▾</span><label class="fl" style="margin:0">세부</label><span class="tk" id="tkDetail">0</span></div>
+        <textarea class="pr sub-body" id="pDetail" placeholder="세부 태그"></textarea>
       </div>
-      <div class="field" style="margin-bottom:0">
-        <div class="slabel"><label class="fl" style="margin:0">네거티브</label><span class="tk" id="tkNeg">0</span></div>
-        <textarea class="pr neg" id="negative" placeholder="추가로 빼고 싶은 요소"></textarea>
+      <div class="field sub" data-subwrap style="margin-bottom:0">
+        <div class="slabel sub-h" data-subacc><span class="sub-arr">▾</span><label class="fl" style="margin:0">네거티브</label><span class="tk" id="tkNeg">0</span></div>
+        <textarea class="pr neg sub-body" id="negative" placeholder="추가로 빼고 싶은 요소"></textarea>
       </div>
     </div>
   </div>
@@ -244,7 +264,10 @@
     </div>
     <div class="acc-body">
       <div id="charList"></div>
-      <button class="addchar" id="addChar">+ 캐릭터 추가</button>
+      <div class="row" style="margin-top:4px">
+        <button class="addchar" id="addChar">+ 캐릭터</button>
+        <button class="addchar" id="addFolder" style="background:var(--bg2)">+ 폴더</button>
+      </div>
       <div class="tog" style="margin-top:6px">
         <span class="lab">위치 좌표 사용</span>
         <div class="sw" id="swCoords" data-sw></div>
@@ -365,10 +388,13 @@
 <div class="wrap">
   <div class="card">
     <div class="acc-h" style="cursor:default">
-      <div class="card-t" style="margin:0">프롬프트 조각</div>
-      <button id="fragAdd" style="font-size:13px;color:var(--accent2);font-weight:700">+ 추가</button>
+      <div class="card-t" style="margin:0">프롬프트 조각 (와일드카드)</div>
+      <div style="display:flex;gap:12px">
+        <button id="fragFolderAdd" style="font-size:13px;color:var(--txt2);font-weight:700">+ 폴더</button>
+        <button id="fragAdd" style="font-size:13px;color:var(--accent2);font-weight:700">+ 조각</button>
+      </div>
     </div>
-    <p class="hint" style="margin-top:8px">자주 쓰는 프롬프트를 저장해두고 탭 한 번으로 현재 프롬프트에 붙여넣으세요.</p>
+    <p class="hint" style="margin-top:8px">조각에 여러 줄을 넣고, 프롬프트에 <b style="color:var(--accent2)">&lt;폴더명/조각명&gt;</b> 형태로 적으면 생성할 때마다 그 줄 중 하나가 랜덤으로 들어갑니다. 폴더 없는 조각은 <b style="color:var(--accent2)">&lt;조각명&gt;</b>으로 씁니다.</p>
   </div>
   <div id="fragList"></div>
   <div class="empty" id="fragEmpty">저장된 조각이 없습니다.</div>
@@ -423,9 +449,12 @@
     <div class="grab"></div>
     <h3 id="fragTitle">조각 추가</h3>
     <label class="fl">이름</label>
-    <input class="tin" id="fragName" placeholder="예: 내 기본 캐릭터">
-    <label class="fl">내용</label>
-    <textarea class="tin" id="fragContent" style="min-height:90px" placeholder="프롬프트 텍스트"></textarea>
+    <input class="tin" id="fragName" placeholder="예: hairstyle">
+    <label class="fl">폴더</label>
+    <select class="sel" id="fragFolderSel" style="margin-bottom:10px"><option value="">(없음)</option></select>
+    <label class="fl">내용 (한 줄에 하나씩 — 생성 시 랜덤으로 한 줄 선택)</label>
+    <textarea class="tin" id="fragContent" style="min-height:110px" placeholder="long hair&#10;short hair, blunt bangs&#10;twintails"></textarea>
+    <div id="fragTokenHint" style="font-size:12px;color:var(--accent2);margin:6px 0 10px"></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-s" id="fragCancel">취소</button>
       <button class="btn btn-p" id="fragSave">저장</button>
@@ -520,12 +549,15 @@ const state={
   seed:LS.getItem('nais_seed')||'',
   coords:LS.getItem('nais_coords')==='1',
   chars:JSON.parse(LS.getItem('nais_chars')||'[]'),
+  charFolders:JSON.parse(LS.getItem('nais_charfolders')||'[]'),
+  charsCollapsed:LS.getItem('nais_charscollapsed')==='1',
   prompt:LS.getItem('nais_prompt')||'',
   pBase:LS.getItem('nais_pbase')||LS.getItem('nais_prompt')||'',
   pAdd:LS.getItem('nais_padd')||'',
   pDetail:LS.getItem('nais_pdetail')||'',
   negative:LS.getItem('nais_negative')||'',
-  frags:JSON.parse(LS.getItem('nais_frags')||'[]'),
+  frags:JSON.parse(LS.getItem('nais_frags')||'[]').map(f=>f.id?f:{id:'g'+Math.random().toString(36).slice(2,8),folder:null,name:f.name||'조각',content:f.content||''}),
+  fragFolders:JSON.parse(LS.getItem('nais_fragfolders')||'[]'),
 };
 function save(k,v){LS.setItem('nais_'+k,v);}
 
@@ -596,49 +628,137 @@ function syncResChips(){
 function refreshSlider(el){const min=+el.min,max=+el.max;const p=((el.value-min)/(max-min))*100;el.style.setProperty('--p',p+'%');}
 
 //=================== Characters ===================
-function renderChars(){
-  const list=$('charList');
-  list.innerHTML=state.chars.map((c,i)=>`
-    <div class="charblk">
-      <div class="ch-top"><b>캐릭터 ${i+1}</b>
+function charCardHTML(c,i){
+  const nm=c.name&&c.name.trim()?c.name:`캐릭터 ${i+1}`;
+  const col=c.collapsed?'collapsed':'';
+  return `
+    <div class="charblk ${col}" data-charblk="${i}">
+      <div class="ch-top">
+        <span class="sub-arr" data-charfold="${i}">▾</span>
+        <input class="ch-name" data-charname="${i}" value="${(c.name||'').replace(/"/g,'&quot;')}" placeholder="${nm}">
         <div class="sw ${c.enabled!==false?'on':''}" data-charsw="${i}"></div>
         <button class="ch-del" data-chardel="${i}">×</button>
       </div>
-      <textarea class="pr mini" data-charprompt="${i}" placeholder="이 캐릭터의 프롬프트">${c.prompt||''}</textarea>
-      <textarea class="pr mini" data-charneg="${i}" placeholder="이 캐릭터의 네거티브" style="margin-top:7px">${c.negative||''}</textarea>
-      ${state.coords?`<div class="row" style="margin:8px 0 0"><div><label class="fl">X (0~1)</label><input class="num" data-charx="${i}" type="number" step="0.05" min="0" max="1" value="${c.x??0.5}"></div><div><label class="fl">Y (0~1)</label><input class="num" data-chary="${i}" type="number" step="0.05" min="0" max="1" value="${c.y??0.5}"></div></div>`:''}
-    </div>`).join('');
+      <div class="ch-body">
+        <textarea class="pr mini" data-charprompt="${i}" placeholder="이 캐릭터의 프롬프트">${c.prompt||''}</textarea>
+        <textarea class="pr mini" data-charneg="${i}" placeholder="이 캐릭터의 네거티브" style="margin-top:7px">${c.negative||''}</textarea>
+        ${state.coords?`<div class="row" style="margin:8px 0 0"><div><label class="fl">X (0~1)</label><input class="num" data-charx="${i}" type="number" step="0.05" min="0" max="1" value="${c.x??0.5}"></div><div><label class="fl">Y (0~1)</label><input class="num" data-chary="${i}" type="number" step="0.05" min="0" max="1" value="${c.y??0.5}"></div></div>`:''}
+        ${state.charFolders.length?`<div class="field" style="margin:8px 0 0"><label class="fl">폴더</label><select class="sel" data-charmove="${i}"><option value="">(없음)</option>${state.charFolders.map(f=>`<option value="${f.id}" ${c.folder===f.id?'selected':''}>${f.name}</option>`).join('')}</select></div>`:''}
+      </div>
+    </div>`;
+}
+function renderChars(){
+  const list=$('charList');
+  const folders=state.charFolders;
+  let html='';
+  // grouped by folder
+  for(const f of folders){
+    const members=state.chars.map((c,i)=>({c,i})).filter(x=>x.c.folder===f.id);
+    html+=`<div class="cfolder ${f.collapsed?'collapsed':''}" data-cfolder="${f.id}">
+      <div class="cfolder-h">
+        <span class="sub-arr" data-foldfold="${f.id}">▾</span>
+        <span class="fic">📁</span>
+        <input class="cf-name" data-foldname="${f.id}" value="${(f.name||'').replace(/"/g,'&quot;')}" placeholder="폴더 이름">
+        <span class="cf-count">${members.length}</span>
+        <button class="ch-del" data-folddel="${f.id}">×</button>
+      </div>
+      <div class="cfolder-body">${members.map(x=>charCardHTML(x.c,x.i)).join('')||'<div class="hint" style="padding:4px 2px">비어 있음</div>'}</div>
+    </div>`;
+  }
+  // ungrouped
+  const loose=state.chars.map((c,i)=>({c,i})).filter(x=>!x.c.folder||!folders.some(f=>f.id===x.c.folder));
+  html+=loose.map(x=>charCardHTML(x.c,x.i)).join('');
+  list.innerHTML=html;
   $('charCount').textContent=state.chars.length?`(${state.chars.length})`:'';
-  // bind
+  // bind char fields
   list.querySelectorAll('[data-charprompt]').forEach(t=>t.oninput=e=>{state.chars[+e.target.dataset.charprompt].prompt=e.target.value;saveChars();});
   list.querySelectorAll('[data-charneg]').forEach(t=>t.oninput=e=>{state.chars[+e.target.dataset.charneg].negative=e.target.value;saveChars();});
   list.querySelectorAll('[data-charx]').forEach(t=>t.oninput=e=>{state.chars[+e.target.dataset.charx].x=+e.target.value;saveChars();});
   list.querySelectorAll('[data-chary]').forEach(t=>t.oninput=e=>{state.chars[+e.target.dataset.chary].y=+e.target.value;saveChars();});
-  list.querySelectorAll('[data-charsw]').forEach(s=>s.onclick=e=>{const i=+e.target.dataset.charsw;state.chars[i].enabled=state.chars[i].enabled===false;saveChars();renderChars();});
-  list.querySelectorAll('[data-chardel]').forEach(b=>b.onclick=e=>{state.chars.splice(+e.target.dataset.chardel,1);saveChars();renderChars();});
+  list.querySelectorAll('[data-charname]').forEach(t=>t.oninput=e=>{state.chars[+e.target.dataset.charname].name=e.target.value;saveChars();});
+  list.querySelectorAll('[data-charsw]').forEach(s=>s.onclick=e=>{const i=+e.currentTarget.dataset.charsw;state.chars[i].enabled=state.chars[i].enabled===false;saveChars();renderChars();});
+  list.querySelectorAll('[data-chardel]').forEach(b=>b.onclick=e=>{state.chars.splice(+e.currentTarget.dataset.chardel,1);saveChars();renderChars();});
+  list.querySelectorAll('[data-charfold]').forEach(b=>b.onclick=e=>{const i=+e.currentTarget.dataset.charfold;state.chars[i].collapsed=!state.chars[i].collapsed;saveChars();renderChars();});
+  list.querySelectorAll('[data-charmove]').forEach(s=>s.onchange=e=>{const i=+e.currentTarget.dataset.charmove;state.chars[i].folder=e.target.value||null;saveChars();renderChars();});
+  // bind folder fields
+  list.querySelectorAll('[data-foldname]').forEach(t=>t.oninput=e=>{const f=state.charFolders.find(f=>f.id===e.target.dataset.foldname);if(f){f.name=e.target.value;saveCharFolders();}});
+  list.querySelectorAll('[data-foldfold]').forEach(b=>b.onclick=e=>{const f=state.charFolders.find(f=>f.id===e.currentTarget.dataset.foldfold);if(f){f.collapsed=!f.collapsed;saveCharFolders();renderChars();}});
+  list.querySelectorAll('[data-folddel]').forEach(b=>b.onclick=e=>{const id=e.currentTarget.dataset.folddel;state.chars.forEach(c=>{if(c.folder===id)c.folder=null;});state.charFolders=state.charFolders.filter(f=>f.id!==id);saveChars();saveCharFolders();renderChars();});
 }
 function saveChars(){save('chars',JSON.stringify(state.chars));}
+function saveCharFolders(){save('charfolders',JSON.stringify(state.charFolders));}
+function addCharFolder(){state.charFolders.push({id:'f'+Date.now(),name:'새 폴더',collapsed:false});saveCharFolders();renderChars();$('charAcc').classList.add('open');}
 
 //=================== Fragments ===================
+function fragToken(f){
+  const fold=f.folder?state.fragFolders.find(x=>x.id===f.folder):null;
+  return fold?`<${fold.name}/${f.name}>`:`<${f.name}>`;
+}
+function fragRowHTML(f){
+  const lines=(f.content||'').split('\n').filter(l=>l.trim()).length;
+  return `<div class="frag">
+      <span class="fn">${esc(f.name)}</span>
+      <span class="ft">${lines}줄 · ${esc(fragToken(f))}</span>
+      <button class="fb" data-fragcopy="${f.id}">토큰</button>
+      <button class="fb" data-fragedit="${f.id}" style="background:var(--bg2);color:var(--txt2)">편집</button>
+      <button class="ch-del" data-fragdel="${f.id}" style="color:var(--txt3)">×</button>
+    </div>`;
+}
 function renderFrags(){
   const list=$('fragList');
-  $('fragEmpty').style.display=state.frags.length?'none':'block';
-  list.innerHTML=state.frags.map((f,i)=>`
-    <div class="frag">
-      <span class="fn">${esc(f.name)}</span>
-      <span class="ft">${esc(f.content)}</span>
-      <button class="fb" data-fragins="${i}">붙여넣기</button>
-      <button class="ch-del" data-fragdel="${i}" style="color:var(--txt3)">×</button>
-    </div>`).join('');
-  list.querySelectorAll('[data-fragins]').forEach(b=>b.onclick=e=>{
-    const f=state.frags[+e.target.dataset.fragins];
-    const el=$('pAdd'); el.value=(el.value.trim()?el.value.trim()+', ':'')+f.content;
-    state.pAdd=el.value; save('padd',el.value); updateTokens();
-    toast('추가 프롬프트에 붙여넣음'); switchPage('pageGen');
+  $('fragEmpty').style.display=(state.frags.length||state.fragFolders.length)?'none':'block';
+  let html='';
+  for(const fo of state.fragFolders){
+    const members=state.frags.filter(f=>f.folder===fo.id);
+    html+=`<div class="cfolder ${fo.collapsed?'collapsed':''}">
+      <div class="cfolder-h">
+        <span class="sub-arr" data-fragfoldtoggle="${fo.id}">▾</span>
+        <span class="fic">📁</span>
+        <input class="cf-name" data-fragfoldname="${fo.id}" value="${(fo.name||'').replace(/"/g,'&quot;')}" placeholder="폴더 이름">
+        <span class="cf-count">${members.length}</span>
+        <button class="ch-del" data-fragfolddel="${fo.id}">×</button>
+      </div>
+      <div class="cfolder-body">${members.map(fragRowHTML).join('')||'<div class="hint" style="padding:2px">비어 있음</div>'}</div>
+    </div>`;
+  }
+  const loose=state.frags.filter(f=>!f.folder||!state.fragFolders.some(fo=>fo.id===f.folder));
+  html+=loose.map(fragRowHTML).join('');
+  list.innerHTML=html;
+  // bind
+  list.querySelectorAll('[data-fragcopy]').forEach(b=>b.onclick=e=>{
+    const f=state.frags.find(x=>x.id===e.currentTarget.dataset.fragcopy);
+    const tok=fragToken(f);
+    navigator.clipboard?.writeText(tok).then(()=>toast('복사됨: '+tok)).catch(()=>toast('복사: '+tok));
   });
-  list.querySelectorAll('[data-fragdel]').forEach(b=>b.onclick=e=>{state.frags.splice(+e.target.dataset.fragdel,1);save('frags',JSON.stringify(state.frags));renderFrags();});
+  list.querySelectorAll('[data-fragedit]').forEach(b=>b.onclick=e=>editFrag(e.currentTarget.dataset.fragedit));
+  list.querySelectorAll('[data-fragdel]').forEach(b=>b.onclick=e=>{state.frags=state.frags.filter(x=>x.id!==e.currentTarget.dataset.fragdel);saveFrags();renderFrags();});
+  list.querySelectorAll('[data-fragfoldname]').forEach(t=>t.oninput=e=>{const fo=state.fragFolders.find(x=>x.id===e.target.dataset.fragfoldname);if(fo){fo.name=e.target.value;saveFragFolders();}});
+  list.querySelectorAll('[data-fragfoldtoggle]').forEach(b=>b.onclick=e=>{const fo=state.fragFolders.find(x=>x.id===e.currentTarget.dataset.fragfoldtoggle);if(fo){fo.collapsed=!fo.collapsed;saveFragFolders();renderFrags();}});
+  list.querySelectorAll('[data-fragfolddel]').forEach(b=>b.onclick=e=>{const id=e.currentTarget.dataset.fragfolddel;state.frags.forEach(f=>{if(f.folder===id)f.folder=null;});state.fragFolders=state.fragFolders.filter(x=>x.id!==id);saveFrags();saveFragFolders();renderFrags();});
 }
+function saveFrags(){save('frags',JSON.stringify(state.frags));}
+function saveFragFolders(){save('fragfolders',JSON.stringify(state.fragFolders));}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// Wildcard expansion: replace <folder/name> or <name> with a random line of that fragment
+function expandWildcards(text){
+  if(!text)return text;
+  return text.replace(/<([^<>]+)>/g,(m,inner)=>{
+    inner=inner.trim();
+    let folderName=null,fragName=inner;
+    if(inner.includes('/')){const p=inner.split('/');folderName=p[0].trim();fragName=p.slice(1).join('/').trim();}
+    let cand=state.frags.filter(f=>f.name===fragName);
+    if(folderName!==null){
+      const fo=state.fragFolders.find(x=>x.name===folderName);
+      cand=fo?cand.filter(f=>f.folder===fo.id):[];
+    }
+    if(!cand.length)return m; // leave as-is if not found
+    const frag=cand[0];
+    const lines=(frag.content||'').split('\n').map(l=>l.trim()).filter(l=>l.length);
+    if(!lines.length)return '';
+    return lines[Math.floor(Math.random()*lines.length)];
+  });
+}
 
 //=================== Library ===================
 async function renderLib(){
@@ -653,7 +773,7 @@ async function renderLib(){
 //=================== Generation ===================
 function buildNegative(){
   const pre=ucPrefix(state.model,state.ucPreset);
-  const user=$('negative').value.trim();
+  const user=expandWildcards($('negative').value.trim());
   if(pre&&user)return pre+', '+user;
   return pre||user;
 }
@@ -697,14 +817,18 @@ async function generate(){
   const w=state.res.label==='커스텀'?+$('resW').value:state.res.w;
   const h=state.res.label==='커스텀'?+$('resH').value:state.res.h;
 
-  // char captions
+  // char captions (wildcards expanded once each)
   const charCaps=[],charNegCaps=[];
   const activeChars=state.chars.filter(c=>c.enabled!==false&&(c.prompt||'').trim());
   for(const c of activeChars){
     const center=state.coords?{x:c.x??0.5,y:c.y??0.5}:{x:0.5,y:0.5};
-    charCaps.push({char_caption:stripComments(c.prompt),centers:[center]});
-    charNegCaps.push({char_caption:stripComments(c.negative||''),centers:[center]});
+    charCaps.push({char_caption:expandWildcards(stripComments(c.prompt)),centers:[center]});
+    charNegCaps.push({char_caption:expandWildcards(stripComments(c.negative||'')),centers:[center]});
   }
+
+  // expand wildcards ONCE so input and base_caption match
+  const finalPrompt=expandWildcards(stripComments(buildPrompt()));
+  const finalNeg=stripComments(buildNegative());
 
   const params={
     params_version:3, width:w, height:h,
@@ -713,15 +837,15 @@ async function generate(){
     autoSmea:false, dynamic_thresholding:false, controlnet_strength:1,
     legacy:false, legacy_v3_extend:false, prefer_brownian:true,
     cfg_rescale:+state.rescale, noise_schedule:state.scheduler,
-    seed:seed, negative_prompt:buildNegative(),
+    seed:seed, negative_prompt:finalNeg,
     deliberate_euler_ancestral_bug:false, normalize_reference_strength_multiple:true,
     add_original_image:true, legacy_uc:false, image_format:'png',
     skip_cfg_above_sigma:state.variety?58:null,
     use_coords:state.coords&&charCaps.length>0,
-    v4_prompt:{caption:{base_caption:stripComments(buildPrompt()),char_captions:charCaps},use_coords:state.coords&&charCaps.length>0,use_order:true},
-    v4_negative_prompt:{caption:{base_caption:stripComments(buildNegative()),char_captions:charNegCaps},legacy_uc:false},
+    v4_prompt:{caption:{base_caption:finalPrompt,char_captions:charCaps},use_coords:state.coords&&charCaps.length>0,use_order:true},
+    v4_negative_prompt:{caption:{base_caption:finalNeg,char_captions:charNegCaps},legacy_uc:false},
   };
-  const payload={input:buildPrompt(),model:model,action:'generate',parameters:params};
+  const payload={input:finalPrompt,model:model,action:'generate',parameters:params};
 
   try{
     const url=naiURL('https://image.novelai.net/ai/generate-image');
@@ -869,30 +993,43 @@ function bind(){
   $('resH').oninput=e=>{state.res.h=+e.target.value;save('res',JSON.stringify(state.res));};
 
   // characters
-  $('addChar').onclick=()=>{state.chars.push({prompt:'',negative:'',enabled:true,x:0.5,y:0.5});saveChars();renderChars();$('charAcc').classList.add('open');};
+  $('addChar').onclick=()=>{state.chars.push({name:'',prompt:'',negative:'',enabled:true,x:0.5,y:0.5,folder:null,collapsed:false});saveChars();renderChars();$('charAcc').classList.add('open');};
+  $('addFolder').onclick=()=>addCharFolder();
 
   // accordion
   document.querySelectorAll('[data-acc]').forEach(h=>h.onclick=()=>h.closest('.acc').classList.toggle('open'));
+  document.querySelectorAll('[data-subacc]').forEach(h=>h.onclick=()=>h.closest('.sub').classList.toggle('collapsed'));
 
   // nav
   document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>switchPage(b.dataset.page));
 
   // fragments
-  $('fragAdd').onclick=()=>{editFrag(-1);};
+  $('fragAdd').onclick=()=>{editFrag(null);};
   $('libClear').onclick=async()=>{if(confirm('라이브러리를 모두 삭제할까요?')){await dbClear();renderLib();}};
   $('fragCancel').onclick=()=>$('fragModal').classList.remove('show');
   $('fragSave').onclick=()=>{
-    const name=$('fragName').value.trim()||'무제';const content=$('fragContent').value.trim();
-    if(!content){toast('내용을 입력하세요',true);return;}
-    if(editFrag._i>=0)state.frags[editFrag._i]={name,content};else state.frags.push({name,content});
-    save('frags',JSON.stringify(state.frags));renderFrags();$('fragModal').classList.remove('show');
+    const name=$('fragName').value.trim()||'무제';
+    const content=$('fragContent').value.replace(/\n+$/,'');
+    const folder=$('fragFolderSel').value||null;
+    if(!content.trim()){toast('내용을 입력하세요',true);return;}
+    if(editFrag._id){
+      const f=state.frags.find(x=>x.id===editFrag._id);
+      if(f){f.name=name;f.content=content;f.folder=folder;}
+    }else{
+      state.frags.push({id:'g'+Date.now().toString(36),folder,name,content});
+    }
+    saveFrags();renderFrags();$('fragModal').classList.remove('show');
   };
+  $('fragFolderAdd').onclick=()=>{state.fragFolders.push({id:'ff'+Date.now(),name:'새 폴더',collapsed:false});saveFragFolders();renderFrags();};
 }
-function editFrag(i){
-  editFrag._i=i;
-  $('fragTitle').textContent=i>=0?'조각 편집':'조각 추가';
-  $('fragName').value=i>=0?state.frags[i].name:'';
-  $('fragContent').value=i>=0?state.frags[i].content:'';
+function editFrag(id){
+  editFrag._id=id||null;
+  const f=id?state.frags.find(x=>x.id===id):null;
+  $('fragTitle').textContent=f?'조각 편집':'조각 추가';
+  $('fragName').value=f?f.name:'';
+  $('fragContent').value=f?f.content:'';
+  $('fragFolderSel').innerHTML='<option value="">(없음)</option>'+state.fragFolders.map(fo=>`<option value="${fo.id}" ${f&&f.folder===fo.id?'selected':''}>${esc(fo.name)}</option>`).join('');
+  $('fragTokenHint').textContent=f?('토큰: '+fragToken(f)):'';
   $('fragModal').classList.add('show');
 }
 
