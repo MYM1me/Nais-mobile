@@ -50,9 +50,12 @@
 
   label.fl{display:block; font-size:12px; color:var(--txt2); margin:0 0 5px; font-weight:600;}
   textarea.pr{width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:var(--r2);
-    color:var(--txt); padding:11px 12px; min-height:84px; line-height:1.5;}
+    color:var(--txt); padding:11px 12px; min-height:64px; line-height:1.5;}
   textarea.pr:focus{outline:none; border-color:var(--accent); background:#101019;}
   textarea.neg{min-height:54px;}
+  .tk{font-size:11px; color:var(--txt3); font-weight:600; background:var(--bg2);
+    padding:1px 7px; border-radius:8px; min-width:18px; text-align:center;}
+  .tk.warn{color:#ffb86b;} .tk.over{color:var(--bad);}
   .mini{min-height:46px!important;}
 
   /* ---- Controls ---- */
@@ -208,14 +211,28 @@
   </div>
 
   <!-- Prompt -->
-  <div class="card">
-    <div class="field">
-      <label class="fl">프롬프트</label>
-      <textarea class="pr" id="prompt" placeholder="1girl, ..."></textarea>
+  <div class="card acc open" id="promptAcc">
+    <div class="acc-h" data-acc>
+      <div class="card-t" style="margin:0">프롬프트</div>
+      <div class="arr">▶</div>
     </div>
-    <div class="field">
-      <label class="fl">네거티브 프롬프트</label>
-      <textarea class="pr neg" id="negative" placeholder="추가로 빼고 싶은 요소"></textarea>
+    <div class="acc-body">
+      <div class="field">
+        <div class="slabel"><label class="fl" style="margin:0">기본</label><span class="tk" id="tkBase">0</span></div>
+        <textarea class="pr" id="pBase" placeholder="1girl, ..."></textarea>
+      </div>
+      <div class="field">
+        <div class="slabel"><label class="fl" style="margin:0">추가</label><span class="tk" id="tkAdd">0</span></div>
+        <textarea class="pr" id="pAdd" placeholder="추가 태그"></textarea>
+      </div>
+      <div class="field">
+        <div class="slabel"><label class="fl" style="margin:0">세부</label><span class="tk" id="tkDetail">0</span></div>
+        <textarea class="pr" id="pDetail" placeholder="세부 태그"></textarea>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <div class="slabel"><label class="fl" style="margin:0">네거티브</label><span class="tk" id="tkNeg">0</span></div>
+        <textarea class="pr neg" id="negative" placeholder="추가로 빼고 싶은 요소"></textarea>
+      </div>
     </div>
   </div>
 
@@ -252,8 +269,12 @@
   </div>
 
   <!-- Parameters -->
-  <div class="card">
-    <div class="card-t">생성 파라미터</div>
+  <div class="card acc" id="paramAcc">
+    <div class="acc-h" data-acc>
+      <div class="card-t" style="margin:0">생성 파라미터</div>
+      <div class="arr">▶</div>
+    </div>
+    <div class="acc-body">
     <div class="field">
       <div class="slabel"><label class="fl" style="margin:0">Steps</label><span class="v" id="stepsV">28</span></div>
       <input type="range" id="steps" min="1" max="50" value="28">
@@ -284,10 +305,16 @@
         <button class="sbtn lock" id="seedLock" aria-label="시드 잠금">🔓</button>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Quality & extras -->
-  <div class="card">
+  <div class="card acc" id="qualAcc">
+    <div class="acc-h" data-acc>
+      <div class="card-t" style="margin:0">품질 · 기타</div>
+      <div class="arr">▶</div>
+    </div>
+    <div class="acc-body">
     <div class="tog">
       <span class="lab">품질 태그 추가</span>
       <div class="sw on" id="swQuality" data-sw></div>
@@ -305,6 +332,7 @@
     <div class="tog">
       <span class="lab">Variety+ <span style="color:var(--txt3);font-size:12px">(다양성 부스트)</span></span>
       <div class="sw" id="swVariety" data-sw></div>
+    </div>
     </div>
   </div>
 
@@ -493,6 +521,9 @@ const state={
   coords:LS.getItem('nais_coords')==='1',
   chars:JSON.parse(LS.getItem('nais_chars')||'[]'),
   prompt:LS.getItem('nais_prompt')||'',
+  pBase:LS.getItem('nais_pbase')||LS.getItem('nais_prompt')||'',
+  pAdd:LS.getItem('nais_padd')||'',
+  pDetail:LS.getItem('nais_pdetail')||'',
   negative:LS.getItem('nais_negative')||'',
   frags:JSON.parse(LS.getItem('nais_frags')||'[]'),
 };
@@ -551,7 +582,8 @@ function initSelects(){
   $('seed').value=state.seed; $('seedLock').classList.toggle('on',state.seedLocked);
   $('seedLock').textContent=state.seedLocked?'🔒':'🔓';
   // prompts
-  $('prompt').value=state.prompt; $('negative').value=state.negative;
+  $('pBase').value=state.pBase; $('pAdd').value=state.pAdd; $('pDetail').value=state.pDetail; $('negative').value=state.negative;
+  updateTokens();
   // settings
   $('tokenInput').value=state.token; $('proxyInput').value=state.proxy;
   renderChars(); renderFrags();
@@ -600,8 +632,9 @@ function renderFrags(){
     </div>`).join('');
   list.querySelectorAll('[data-fragins]').forEach(b=>b.onclick=e=>{
     const f=state.frags[+e.target.dataset.fragins];
-    const p=$('prompt'); p.value=(p.value.trim()?p.value.trim()+', ':'')+f.content; state.prompt=p.value; save('prompt',p.value);
-    toast('프롬프트에 추가됨'); switchPage('pageGen');
+    const el=$('pAdd'); el.value=(el.value.trim()?el.value.trim()+', ':'')+f.content;
+    state.pAdd=el.value; save('padd',el.value); updateTokens();
+    toast('추가 프롬프트에 붙여넣음'); switchPage('pageGen');
   });
   list.querySelectorAll('[data-fragdel]').forEach(b=>b.onclick=e=>{state.frags.splice(+e.target.dataset.fragdel,1);save('frags',JSON.stringify(state.frags));renderFrags();});
 }
@@ -624,8 +657,27 @@ function buildNegative(){
   if(pre&&user)return pre+', '+user;
   return pre||user;
 }
+function joinPrompt(){
+  return [state.pBase,state.pAdd,state.pDetail]
+    .map(s=>(s||'').trim().replace(/,\s*$/,''))
+    .filter(s=>s.length)
+    .join(', ');
+}
+function countTags(s){
+  s=(s||'').split('\n').filter(l=>!l.trimStart().startsWith('#')).join(',');
+  return s.split(',').map(t=>t.trim()).filter(t=>t.length).length;
+}
+function setTk(id,n){
+  const el=$(id); if(!el)return;
+  el.textContent=n;
+  el.className='tk'+(n>120?' over':n>80?' warn':'');
+}
+function updateTokens(){
+  const b=countTags(state.pBase),a=countTags(state.pAdd),d=countTags(state.pDetail),n=countTags(state.negative);
+  setTk('tkBase',b); setTk('tkAdd',a); setTk('tkDetail',d); setTk('tkNeg',n);
+}
 function buildPrompt(){
-  let p=$('prompt').value;
+  let p=joinPrompt();
   if(state.quality){const q=QUALITY_TAGS[state.model]||'';p=p.trimEnd().replace(/,\s*$/,'')+q;}
   return p;
 }
@@ -687,7 +739,7 @@ async function generate(){
     const fname=Object.keys(zip.files)[0];
     const b64=await zip.file(fname).async('base64');
     showResult(b64,false,{seed,model,w,h});
-    if(state.autosave){await dbAdd({id:'i'+Date.now(),b64,ts:Date.now(),seed,prompt:$('prompt').value});}
+    if(state.autosave){await dbAdd({id:'i'+Date.now(),b64,ts:Date.now(),seed,prompt:joinPrompt()});}
     loadAnlas();
     toast('생성 완료 (seed '+seed+')');
   }catch(e){
@@ -786,8 +838,10 @@ function bind(){
   $('proxyInput').onchange=e=>{state.proxy=e.target.value.trim();save('proxy',state.proxy);};
   $('genBtn').onclick=generate;
 
-  $('prompt').oninput=e=>{state.prompt=e.target.value;save('prompt',e.target.value);};
-  $('negative').oninput=e=>{state.negative=e.target.value;save('negative',e.target.value);};
+  $('pBase').oninput=e=>{state.pBase=e.target.value;save('pbase',e.target.value);updateTokens();};
+  $('pAdd').oninput=e=>{state.pAdd=e.target.value;save('padd',e.target.value);updateTokens();};
+  $('pDetail').oninput=e=>{state.pDetail=e.target.value;save('pdetail',e.target.value);updateTokens();};
+  $('negative').oninput=e=>{state.negative=e.target.value;save('negative',e.target.value);updateTokens();};
   $('model').onchange=e=>{state.model=e.target.value;save('model',e.target.value);};
   $('sampler').onchange=e=>{state.sampler=e.target.value;save('sampler',e.target.value);};
   $('scheduler').onchange=e=>{state.scheduler=e.target.value;save('scheduler',e.target.value);};
